@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>סוגר שטחים - משודרג</title>
+<style>
+    :root { --accent: #00ffcc; }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+        margin: 0; padding: 0;
+        background: radial-gradient(circle at 50% 0%, #1c1f2b 0%, #0b0c11 70%);
+        color: #ffffff;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        height: 100%;
+        overflow: hidden;
+        touch-action: none;
+        user-select: none;
+    }
+    body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 100vh;
+        padding: 8px 0;
+    }
+    header { text-align: center; }
+    h1 {
+        margin: 0;
+        font-size: 20px;
+        color: var(--accent);
+        letter-spacing: 1px;
+        transition: color 0.4s ease;
+        text-shadow: 0 0 10px color-mix(in srgb, var(--accent) 60%, transparent);
+    }
+    .stats {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        font-size: 11.5px;
+        color: #aaa;
+        margin-top: 6px;
+        flex-wrap: wrap;
+        max-width: 320px;
+    }
+    .stats b { color: var(--accent); font-size: 13.5px; transition: color 0.4s ease; }
+
+    #progress-wrap {
+        width: 260px;
+        height: 8px;
+        background: #1e2130;
+        border-radius: 4px;
+        margin-top: 8px;
+        overflow: hidden;
+        border: 1px solid #2a2e40;
+    }
+    #progress-bar {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+        transition: width 0.15s ease-out, background 0.4s ease;
+    }
+
+    #game-container {
+        position: relative;
+        box-shadow: 0 0 25px color-mix(in srgb, var(--accent) 35%, transparent);
+        border: 2px solid var(--accent);
+        border-radius: 6px;
+        background-color: #0d0e14;
+        margin: 8px 0;
+        touch-action: none;
+        transition: border-color 0.4s ease, box-shadow 0.4s ease;
+    }
+    canvas { display: block; border-radius: 4px; touch-action: none; }
+
+    .overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(5,6,10,0.9);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        text-align: center;
+        border-radius: 4px;
+        padding: 16px;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h2 { margin: 0; color: var(--accent); font-size: 22px; }
+    .overlay p { margin: 0; color: #ccc; font-size: 13px; line-height: 1.7; }
+    .overlay .accent { color: #ff0055; font-weight: bold; }
+    .legend {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: center;
+        font-size: 12px;
+        color: #bbb;
+        max-width: 300px;
+    }
+    .legend span { background: rgba(255,255,255,0.06); border-radius: 8px; padding: 3px 8px; }
+    .big-btn {
+        margin-top: 4px;
+        padding: 12px 28px;
+        font-size: 16px;
+        font-weight: bold;
+        border-radius: 10px;
+        border: 2px solid var(--accent);
+        background: color-mix(in srgb, var(--accent) 15%, transparent);
+        color: var(--accent);
+        cursor: pointer;
+    }
+    .big-btn:active { filter: brightness(1.4); }
+
+    #lives-row { font-size: 15px; letter-spacing: 2px; }
+    #lives-row .empty { opacity: 0.25; filter: grayscale(1); }
+
+    #effect-gauges {
+        position: absolute;
+        top: 6px;
+        left: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        z-index: 5;
+        pointer-events: none;
+    }
+    .gauge {
+        width: 24px;
+        height: 72px;
+        border: 2px solid var(--accent);
+        border-radius: 8px;
+        background: rgba(0,0,0,0.45);
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+    }
+    .gauge-fill {
+        width: 100%;
+        background: color-mix(in srgb, var(--accent) 70%, transparent);
+        transition: height 0.1s linear;
+    }
+    .gauge-icon {
+        position: absolute;
+        top: 2px;
+        left: 0; right: 0;
+        text-align: center;
+        font-size: 12px;
+    }
+    .gauge-time {
+        position: absolute;
+        bottom: 2px;
+        left: 0; right: 0;
+        text-align: center;
+        font-size: 10px;
+        font-weight: bold;
+        color: #fff;
+        text-shadow: 0 0 3px #000, 0 0 3px #000;
+    }
+
+    #sound-toggle {
+        position: fixed;
+        top: 10px;
+        left: 10px;
+        z-index: 20;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: #ddd;
+        font-size: 15px;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        cursor: pointer;
+    }
+
+    #hint {
+        font-size: 11px;
+        color: #777;
+        margin-top: 6px;
+        text-align: center;
+        max-width: 320px;
+        line-height: 1.5;
+    }
+</style>
+</head>
+<body>
+
+<button id="sound-toggle">🔊</button>
+
+<header>
+    <h1>סוגר שטחים</h1>
+    <div class="stats">
+        <div>שלב: <b id="level">1</b></div>
+        <div>ניקוד: <b id="score-val">0</b></div>
+        <div>שטח: <b id="percent">0</b>%</div>
+        <div>חיים: <span id="lives-row"></span></div>
+        <div>שיא: <b id="best">0</b></div>
+    </div>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+</header>
+
+<div id="game-container">
+    <div id="effect-gauges"></div>
+    <canvas id="gameCanvas" width="360" height="360"></canvas>
+
+    <div class="overlay" id="start-overlay">
+        <h2>סוגר שטחים</h2>
+        <p>
+            <b>גע וגרור באצבע</b> מתוך שטח כבוש (הקיר) אל השטח הפתוח וחזרה לקיר כדי לכבוש.<br>
+            נגיעה בקו של עצמכם או בכדור תוך כדי ציור = <span class="accent">אובדן חיים</span>.<br>
+            כבשו <b id="target-hint">75%</b> כדי לעלות שלב — הניקוד גדל בכל שלב!
+        </p>
+        <div class="legend">
+            <span>🛡️ מגן זמני</span>
+            <span>❄️ מקפיא כדורים</span>
+            <span>❤️ חיים נוספים</span>
+            <span>💣 כיבוש אוטומטי</span>
+        </div>
+        <button class="big-btn" id="btn-play">התחל משחק</button>
+    </div>
+
+    <div class="overlay hidden" id="gameover-overlay">
+        <h2 id="gameover-title">המשחק נגמר</h2>
+        <p id="gameover-stats"></p>
+        <button class="big-btn" id="btn-restart">שחק שוב</button>
+    </div>
+</div>
+
+<div id="hint">גררו מתוך הקיר החוצה ובחזרה כדי לכבוש שטח • נגיעה בקו של עצמכם = חיים -1</div>
+
+<script>
+(function () {
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+
+    const percentEl = document.getElementById('percent');
+    const scoreValEl = document.getElementById('score-val');
+    const livesRowEl = document.getElementById('lives-row');
+    const levelEl = document.getElementById('level');
+    const bestEl = document.getElementById('best');
+    const progressBar = document.getElementById('progress-bar');
+    const effectGaugesEl = document.getElementById('effect-gauges');
+    const startOverlay = document.getElementById('start-overlay');
+    const gameoverOverlay = document.getElementById('gameover-overlay');
+    const gameoverTitle = document.getElementById('gameover-title');
+    const gameoverStats = document.getElementById('gameover-stats');
+    const targetHint = document.getElementById('target-hint');
+    const soundToggleBtn = document.getElementById('sound-toggle');
+
+    // ---------- הגדרות ----------
+    const GRID = 8;
+    const COLS = canvas.width / GRID;
+    const ROWS = canvas.height / GRID;
+    const TARGET_PERCENT = 75;
+    const MAX_LIVES = 5;
+    const SHIELD_DURATION = 6000;
+    const FREEZE_DURATION = 4000;
+    const MAX_BALLS = 4;
+    const EMPTY = 0, WALL = 1, TRAIL = 2;
+
+    const THEMES = [
+        { wall: '#00ffcc', trail: '#ffe066', accent: '#00ffcc' },
+        { wall: '#b967ff', trail: '#ffe066', accent: '#b967ff' },
+        { wall: '#ff9500', trail: '#fff2b8', accent: '#ff9500' },
+        { wall: '#00c2ff', trail: '#ffe066', accent: '#00c2ff' },
+        { wall: '#ff2fa0', trail: '#ffe0f0', accent: '#ff2fa0' },
+        { wall: '#4dff88', trail: '#ffe066', accent: '#4dff88' },
+    ];
+    const POWERUP_ICONS = { shield: '🛡️', freeze: '❄️', life: '❤️', bomb: '💣' };
+    const POWERUP_LABELS = { shield: 'מגן!', freeze: 'הקפאה!', life: 'חיים +1', bomb: 'פצצה!' };
+    const POWERUP_TYPES = ['shield', 'freeze', 'life', 'bomb'];
+
+    let grid, player, balls, trail;
+    let lives, level, isDrawing, isPlaying, isPaused, penArmed;
+    let capturedPercent, totalInner = 0;
+    let score = 0, bestScore = 0;
+    let theme = THEMES[0];
+
+    let isPenDown = false;
+    let penLocked = false; // נועל את הציור עד הרמת האצבע, מונע פסילות חוזרות מאותה נגיעה
+    let powerUps = [];
+    let nextSpawnAt = 0;
+    let shieldUntil = 0, freezeUntil = 0;
+
+    let flashTimer = 0;
+    let levelPopupTimer = 0;
+    let levelBonusText = '';
+    let isTransitioning = false;
+    let transitionUntil = 0;
+    const TRANSITION_MS = 2000;
+    let gainFloat = null;
+    let pickupFloat = null;
+    let pickupRing = null;
+    let trailTickCounter = 0;
+
+    // ---------- סאונד ----------
+    let audioCtx = null;
+    let soundOn = true;
+
+    function ensureAudio() {
+        if (!soundOn) return;
+        if (!audioCtx) {
+            try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+        }
+        if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+    }
+
+    function tone(freq, dur, type, vol, delay) {
+        if (!soundOn || !audioCtx) return;
+        delay = delay || 0;
+        const t0 = audioCtx.currentTime + delay;
+        const osc = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, t0);
+        g.gain.setValueAtTime(0, t0);
+        g.gain.linearRampToValueAtTime(vol, t0 + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+        osc.connect(g); g.connect(audioCtx.destination);
+        osc.start(t0); osc.stop(t0 + dur + 0.03);
+    }
+
+    function sndTick() { tone(650 + Math.random() * 120, 0.035, 'square', 0.035); }
+    function sndCapture() { tone(500, 0.09, 'sine', 0.18); tone(760, 0.11, 'sine', 0.16, 0.06); }
+    function sndDeath() { tone(220, 0.22, 'sawtooth', 0.2); tone(140, 0.3, 'sawtooth', 0.15, 0.1); }
+    function sndPowerup(type) {
+        if (type === 'shield') { tone(440, 0.15, 'sine', 0.2); tone(660, 0.15, 'sine', 0.2, 0.08); }
+        else if (type === 'freeze') { tone(1000, 0.09, 'triangle', 0.15); tone(1300, 0.12, 'triangle', 0.15, 0.06); }
+        else if (type === 'life') { tone(523, 0.1, 'sine', 0.2); tone(784, 0.16, 'sine', 0.2, 0.08); }
+        else if (type === 'bomb') { tone(90, 0.3, 'square', 0.25); }
+    }
+    function sndLevelUp() { tone(523, 0.12, 'sine', 0.2); tone(659, 0.12, 'sine', 0.2, 0.1); tone(784, 0.22, 'sine', 0.22, 0.2); }
+    function sndGameOver() { tone(300, 0.2, 'sawtooth', 0.2); tone(200, 0.25, 'sawtooth', 0.2, 0.15); tone(120, 0.35, 'sawtooth', 0.2, 0.3); }
+
+    soundToggleBtn.addEventListener('click', () => {
+        soundOn = !soundOn;
+        soundToggleBtn.textContent = soundOn ? '🔊' : '🔇';
+        if (soundOn) ensureAudio();
+    });
+
+    // ---------- בניית שדה ----------
+    function buildBorder() {
+        grid = Array.from({ length: COLS }, () => new Array(ROWS).fill(EMPTY));
+        for (let x = 0; x < COLS; x++) { grid[x][0] = WALL; grid[x][ROWS - 1] = WALL; }
+        for (let y = 0; y < ROWS; y++) { grid[0][y] = WALL; grid[COLS - 1][y] = WALL; }
+        totalInner = (COLS - 2) * (ROWS - 2);
+    }
+
+    function resetPlayer() {
+        player = { gx: Math.floor(COLS / 2), gy: ROWS - 1 };
+        isDrawing = false;
+        trail = [];
+        penArmed = true;
+    }
+
+    function makeBalls(count, speedMul) {
+        balls = [];
+        for (let i = 0; i < count; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const baseSpeed = (2.0 + level * 0.1) * speedMul;
+            balls.push({
+                x: canvas.width / 2 + (i - (count - 1) / 2) * 30,
+                y: canvas.height / 2,
+                vx: Math.cos(angle) * baseSpeed,
+                vy: Math.sin(angle) * baseSpeed,
+                radius: 7
+            });
+        }
+    }
+
+    function applyTheme(lvl) {
+        theme = THEMES[(lvl - 1) % THEMES.length];
+        document.documentElement.style.setProperty('--accent', theme.accent);
+    }
+
+    function newLevelField() {
+        buildBorder();
+        resetPlayer();
+        capturedPercent = 0;
+        powerUps = [];
+        nextSpawnAt = performance.now() + 4000;
+        shieldUntil = 0;
+        freezeUntil = 0;
+        const ballCount = Math.min(MAX_BALLS, 1 + Math.floor((level - 1) / 2));
+        makeBalls(ballCount, 1 + (level - 1) * 0.07);
+        applyTheme(level);
+        updateHud();
+    }
+
+    function startGame() {
+        ensureAudio();
+        lives = 3;
+        level = 1;
+        score = 0;
+        isPlaying = true;
+        isPaused = false;
+        isTransitioning = false;
+        newLevelField();
+        startOverlay.classList.add('hidden');
+        gameoverOverlay.classList.add('hidden');
+    }
+
+    function addScore(points) {
+        if (!points) return;
+        score += points;
+        if (score > bestScore) bestScore = score;
+        updateHud();
+    }
+
+    function updateHud() {
+        percentEl.textContent = Math.floor(capturedPercent);
+        scoreValEl.textContent = score;
+        renderLives();
+        levelEl.textContent = level;
+        bestEl.textContent = bestScore;
+        progressBar.style.width = Math.min(100, (capturedPercent / TARGET_PERCENT) * 100) + '%';
+    }
+
+    function renderLives() {
+        let html = '';
+        for (let i = 0; i < MAX_LIVES; i++) {
+            html += i < lives ? '❤️' : '<span class="empty">🤍</span>';
+        }
+        livesRowEl.innerHTML = html;
+    }
+
+    function updateEffectGauges(now) {
+        let html = '';
+        if (shieldUntil > now) {
+            const remaining = shieldUntil - now;
+            const pct = Math.max(0, Math.min(100, (remaining / SHIELD_DURATION) * 100));
+            html += '<div class="gauge"><div class="gauge-fill" style="height:' + pct + '%"></div><span class="gauge-icon">🛡️</span><span class="gauge-time">' + Math.ceil(remaining / 1000) + '</span></div>';
+        }
+        if (freezeUntil > now) {
+            const remaining = freezeUntil - now;
+            const pct = Math.max(0, Math.min(100, (remaining / FREEZE_DURATION) * 100));
+            html += '<div class="gauge"><div class="gauge-fill" style="height:' + pct + '%"></div><span class="gauge-icon">❄️</span><span class="gauge-time">' + Math.ceil(remaining / 1000) + '</span></div>';
+        }
+        effectGaugesEl.innerHTML = html;
+    }
+
+    function clampIdx(v, max) { return Math.max(0, Math.min(max - 1, v)); }
+
+    // ---------- קלט: ציור קפדני בין שטחים סגורים ----------
+    function getCellFromClient(clientX, clientY) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const px = (clientX - rect.left) * scaleX;
+        const py = (clientY - rect.top) * scaleY;
+        return { gx: clampIdx(Math.floor(px / GRID), COLS), gy: clampIdx(Math.floor(py / GRID), ROWS) };
+    }
+
+    function gridLine(x0, y0, x1, y1) {
+        const pts = [];
+        let dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0);
+        let sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+        let err = dx + dy, x = x0, y = y0;
+        while (true) {
+            pts.push({ x, y });
+            if (x === x1 && y === y1) break;
+            const e2 = 2 * err;
+            if (e2 >= dy) { err += dy; x += sx; }
+            if (e2 <= dx) { err += dx; y += sy; }
+        }
+        return pts;
+    }
+
+    // בונוס נאסף רק כשהתא שבו הוא יושב הופך לשטח כבוש (בתוך אזור שנסגר)
+    function capturePowerupAt(x, y) {
+        const idx = powerUps.findIndex(p => p.x === x && p.y === y);
+        if (idx >= 0) {
+            const p = powerUps[idx];
+            powerUps.splice(idx, 1);
+            applyPowerUp(p.type, x * GRID + GRID / 2, y * GRID + GRID / 2);
+        }
+    }
+
+    // ביטול/מוות: מחזיר את העט לנקודת היציאה מהקיר
+    function revertTrail() {
+        trail.forEach(p => { if (grid[p.x][p.y] === TRAIL) grid[p.x][p.y] = EMPTY; });
+        if (trail.length > 0) { player.gx = trail[0].x; player.gy = trail[0].y; }
+        isDrawing = false;
+        trail = [];
+        penArmed = true;
+    }
+
+    // מעבר תא בודד תוך גרירה - רק שטח סגור -> פתוח -> שטח סגור מותר
+    function processCell(cell) {
+        const val = grid[cell.x][cell.y];
+        if (!isDrawing) {
+            if (val === EMPTY) {
+                isDrawing = true;
+                trail = [{ x: player.gx, y: player.gy }];
+                grid[cell.x][cell.y] = TRAIL;
+                trail.push(cell);
+                player.gx = cell.x; player.gy = cell.y;
+                trailTickCounter = 0;
+            } else if (val === WALL) {
+                player.gx = cell.x; player.gy = cell.y;
+            }
+            return true;
+        } else {
+            if (val === WALL) {
+                player.gx = cell.x; player.gy = cell.y;
+                completeCapture();
+                return false;
+            } else if (val === TRAIL) {
+                loseLife();
+                return false;
+            } else {
+                grid[cell.x][cell.y] = TRAIL;
+                trail.push(cell);
+                player.gx = cell.x; player.gy = cell.y;
+                trailTickCounter++;
+                if (trailTickCounter % 3 === 0) sndTick();
+                return true;
+            }
+        }
+    }
+
+    function handlePenDown(clientX, clientY) {
+        if (!isPlaying || isPaused || isTransitioning) return;
+        ensureAudio();
+        isPenDown = true;
+        penLocked = false;
+        const { gx, gy } = getCellFromClient(clientX, clientY);
+        if (isDrawing) revertTrail();
+        if (grid[gx][gy] === WALL) {
+            player.gx = gx; player.gy = gy;
+            penArmed = true;
+        } else {
+            penArmed = false; // מגע שהתחיל מחוץ לשטח סגור - לא מתחיל קו
+        }
+    }
+
+    function handlePenMove(clientX, clientY) {
+        if (!isPenDown || !isPlaying || isPaused || isTransitioning || penLocked) return;
+        const { gx, gy } = getCellFromClient(clientX, clientY);
+
+        if (!penArmed) {
+            if (grid[gx][gy] === WALL) { player.gx = gx; player.gy = gy; penArmed = true; }
+            return;
+        }
+        if (gx === player.gx && gy === player.gy) return;
+        const path = gridLine(player.gx, player.gy, gx, gy);
+        for (let i = 1; i < path.length; i++) {
+            if (!processCell(path[i])) break;
+        }
+    }
+
+    function handlePenUp() {
+        isPenDown = false;
+        penLocked = false;
+        if (isDrawing) revertTrail();
+    }
+
+    canvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; handlePenDown(t.clientX, t.clientY); }, { passive: false });
+    canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; handlePenMove(t.clientX, t.clientY); }, { passive: false });
+    canvas.addEventListener('touchend', e => { e.preventDefault(); handlePenUp(); }, { passive: false });
+    canvas.addEventListener('touchcancel', () => handlePenUp());
+
+    canvas.addEventListener('mousedown', e => handlePenDown(e.clientX, e.clientY));
+    window.addEventListener('mousemove', e => { if (isPenDown) handlePenMove(e.clientX, e.clientY); });
+    window.addEventListener('mouseup', () => { if (isPenDown) handlePenUp(); });
+
+    document.getElementById('btn-play').addEventListener('click', startGame);
+    document.getElementById('btn-restart').addEventListener('click', startGame);
+
+    // ---------- אובדן חיים ----------
+    function loseLife() {
+        sndDeath();
+        lives--;
+        if (isDrawing) revertTrail();
+        if (isPenDown) penLocked = true; // אותה נגיעה לא תמשיך לצייר עד הרמת האצבע
+        updateHud();
+        if (lives <= 0) endGame();
+        else flashTimer = 12;
+    }
+
+    // ---------- כיבוש שטח (flood fill) ----------
+    function completeCapture() {
+        const before = capturedPercent;
+        const visited = Array.from({ length: COLS }, () => new Array(ROWS).fill(false));
+        const queue = [];
+
+        balls.forEach(b => {
+            const gx = clampIdx(Math.floor(b.x / GRID), COLS);
+            const gy = clampIdx(Math.floor(b.y / GRID), ROWS);
+            if (grid[gx][gy] === EMPTY && !visited[gx][gy]) {
+                visited[gx][gy] = true;
+                queue.push([gx, gy]);
+            }
+        });
+
+        while (queue.length) {
+            const [cx, cy] = queue.pop();
+            const neighbors = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+            for (const [nx, ny] of neighbors) {
+                if (nx < 0 || ny < 0 || nx >= COLS || ny >= ROWS) continue;
+                if (visited[nx][ny] || grid[nx][ny] !== EMPTY) continue;
+                visited[nx][ny] = true;
+                queue.push([nx, ny]);
+            }
+        }
+
+        let captured = 0;
+        for (let x = 1; x < COLS - 1; x++) {
+            for (let y = 1; y < ROWS - 1; y++) {
+                if (grid[x][y] === TRAIL) { grid[x][y] = WALL; capturePowerupAt(x, y); }
+                else if (grid[x][y] === EMPTY && !visited[x][y]) { grid[x][y] = WALL; capturePowerupAt(x, y); }
+                if (grid[x][y] === WALL) captured++;
+            }
+        }
+
+        capturedPercent = (captured / totalInner) * 100;
+        isDrawing = false;
+        trail = [];
+
+        const gain = capturedPercent - before;
+        if (gain > 0.4) {
+            const pts = Math.round(gain * level);
+            addScore(pts);
+            sndCapture();
+            gainFloat = { text: '+' + pts + ' נק׳', timer: 45, x: player.gx * GRID, y: player.gy * GRID };
+        }
+        updateHud();
+
+        if (capturedPercent >= TARGET_PERCENT) startLevelTransition();
+    }
+
+    function startLevelTransition() {
+        isTransitioning = true;
+        transitionUntil = performance.now() + TRANSITION_MS;
+    }
+
+    function finishLevelTransition() {
+        isTransitioning = false;
+        level++;
+        lives = Math.min(MAX_LIVES, lives + 1);
+        levelBonusText = 'קצב ניקוד כפול ' + level;
+        newLevelField();
+        levelPopupTimer = 100;
+        sndLevelUp();
+    }
+
+    function endGame() {
+        isPlaying = false;
+        sndGameOver();
+        gameoverTitle.textContent = 'המשחק נגמר';
+        gameoverStats.innerHTML =
+            'ניקוד סופי: <b>' + score + '</b> (שיא: ' + bestScore + ')<br>הגעת לשלב <b>' + level + '</b> עם כיבוש של ' + Math.floor(capturedPercent) + '%';
+        gameoverOverlay.classList.remove('hidden');
+    }
+
+    // ---------- בונוסים ----------
+    function farFromBalls(x, y, minDist) {
+        return balls.every(b => Math.max(Math.abs(x - b.x / GRID), Math.abs(y - b.y / GRID)) >= minDist);
+    }
+
+    function spawnPowerUpMaybe(now) {
+        if (powerUps.length >= 2 || now < nextSpawnAt) return;
+        for (let tries = 0; tries < 25; tries++) {
+            const rx = 1 + Math.floor(Math.random() * (COLS - 2));
+            const ry = 1 + Math.floor(Math.random() * (ROWS - 2));
+            if (grid[rx][ry] === EMPTY && farFromBalls(rx, ry, 5)) {
+                const type = POWERUP_TYPES[Math.floor(Math.random() * POWERUP_TYPES.length)];
+                powerUps.push({ x: rx, y: ry, type, bornAt: now });
+                break;
+            }
+        }
+        nextSpawnAt = now + 7000 + Math.random() * 5000;
+    }
+
+    function expirePowerUps(now) {
+        powerUps = powerUps.filter(p => now - p.bornAt < 13000);
+    }
+
+    function applyPowerUp(type, px, py) {
+        sndPowerup(type);
+        if (type === 'shield') shieldUntil = performance.now() + SHIELD_DURATION;
+        else if (type === 'freeze') freezeUntil = performance.now() + FREEZE_DURATION;
+        else if (type === 'life') lives = Math.min(MAX_LIVES, lives + 1);
+        else if (type === 'bomb') triggerBomb();
+
+        const pts = 5 * level;
+        addScore(pts);
+        pickupFloat = { icon: POWERUP_ICONS[type], text: POWERUP_LABELS[type] + ' +' + pts, x: px, y: py, timer: 50 };
+        pickupRing = { x: px, y: py, radius: 2, timer: 24 };
+        updateHud();
+    }
+
+    function triggerBomb() {
+        for (let tries = 0; tries < 25; tries++) {
+            const cx = 1 + Math.floor(Math.random() * (COLS - 2));
+            const cy = 1 + Math.floor(Math.random() * (ROWS - 2));
+            if (grid[cx][cy] !== EMPTY || !farFromBalls(cx, cy, 8)) continue;
+            const before = capturedPercent;
+            const R = 4;
+            for (let dx = -R; dx <= R; dx++) {
+                for (let dy = -R; dy <= R; dy++) {
+                    if (dx * dx + dy * dy > R * R) continue;
+                    const x = cx + dx, y = cy + dy;
+                    if (x <= 0 || y <= 0 || x >= COLS - 1 || y >= ROWS - 1) continue;
+                    if (grid[x][y] === EMPTY) { grid[x][y] = WALL; capturePowerupAt(x, y); }
+                }
+            }
+            let captured = 0;
+            for (let x = 1; x < COLS - 1; x++) for (let y = 1; y < ROWS - 1; y++) if (grid[x][y] === WALL) captured++;
+            capturedPercent = (captured / totalInner) * 100;
+            const gain = capturedPercent - before;
+            if (gain > 0.2) {
+                const pts = Math.round(gain * level);
+                addScore(pts);
+                sndCapture();
+                gainFloat = { text: '+' + pts + ' נק׳', timer: 45, x: cx * GRID, y: cy * GRID };
+            }
+            updateHud();
+            if (capturedPercent >= TARGET_PERCENT) startLevelTransition();
+            break;
+        }
+    }
+
+    // ---------- כדורים ----------
+    function isWallAt(px, py) {
+        const gx = clampIdx(Math.floor(px / GRID), COLS);
+        const gy = clampIdx(Math.floor(py / GRID), ROWS);
+        return grid[gx][gy] === WALL;
+    }
+
+    function moveBall(b) {
+        const dirX = b.vx;
+        const nx = b.x + b.vx;
+        const edgeX = dirX > 0 ? nx + b.radius : nx - b.radius;
+        if (isWallAt(edgeX, b.y)) {
+            const gx = clampIdx(Math.floor(edgeX / GRID), COLS);
+            b.x = dirX > 0 ? gx * GRID - b.radius - 0.5 : (gx + 1) * GRID + b.radius + 0.5;
+            b.vx = -b.vx;
+        } else { b.x = nx; }
+
+        const dirY = b.vy;
+        const ny = b.y + b.vy;
+        const edgeY = dirY > 0 ? ny + b.radius : ny - b.radius;
+        if (isWallAt(b.x, edgeY)) {
+            const gy = clampIdx(Math.floor(edgeY / GRID), ROWS);
+            b.y = dirY > 0 ? gy * GRID - b.radius - 0.5 : (gy + 1) * GRID + b.radius + 0.5;
+            b.vy = -b.vy;
+        } else { b.y = ny; }
+
+        const gx = clampIdx(Math.floor(b.x / GRID), COLS);
+        const gy = clampIdx(Math.floor(b.y / GRID), ROWS);
+        const now = performance.now();
+        const shielded = shieldUntil > now;
+        const hitTrail = grid[gx][gy] === TRAIL;
+        const hitPen = isDrawing && gx === player.gx && gy === player.gy;
+
+        if (!shielded && (hitTrail || hitPen)) loseLife(); // מכה אחת = לב אחד בלבד, גם אם שני התנאים מתקיימים יחד
+
+        const puIdx = powerUps.findIndex(p => p.x === gx && p.y === gy);
+        if (puIdx >= 0) powerUps.splice(puIdx, 1);
+    }
+
+    function updateBalls(now) {
+        if (freezeUntil > now) return;
+        for (const b of balls) moveBall(b);
+    }
+
+    // ---------- לולאה ----------
+    function update(now) {
+        if (!isPlaying || isPaused) return;
+        if (isTransitioning) {
+            if (now >= transitionUntil) finishLevelTransition();
+            return;
+        }
+        updateBalls(now);
+        spawnPowerUpMaybe(now);
+        expirePowerUps(now);
+        if (flashTimer > 0) flashTimer--;
+        if (levelPopupTimer > 0) levelPopupTimer--;
+        if (gainFloat) { gainFloat.timer--; if (gainFloat.timer <= 0) gainFloat = null; }
+        if (pickupFloat) { pickupFloat.timer--; if (pickupFloat.timer <= 0) pickupFloat = null; }
+        if (pickupRing) { pickupRing.radius += 1.4; pickupRing.timer--; if (pickupRing.timer <= 0) pickupRing = null; }
+        updateEffectGauges(now);
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        for (let x = 0; x < COLS; x++) {
+            for (let y = 0; y < ROWS; y++) {
+                const cell = grid[x][y];
+                if (cell === WALL) {
+                    ctx.fillStyle = flashTimer > 0 && flashTimer % 4 < 2 ? '#ff5599' : theme.wall;
+                    ctx.fillRect(x * GRID, y * GRID, GRID, GRID);
+                } else if (cell === TRAIL) {
+                    ctx.fillStyle = theme.trail;
+                    ctx.fillRect(x * GRID, y * GRID, GRID, GRID);
+                }
+            }
+        }
+
+        const now = performance.now();
+        for (const p of powerUps) {
+            const cx = p.x * GRID + GRID / 2, cy = p.y * GRID + GRID / 2;
+            const pulse = 1 + 0.15 * Math.sin(now / 150);
+            ctx.save();
+            ctx.font = (GRID * 1.6 * pulse) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(POWERUP_ICONS[p.type], cx, cy);
+            ctx.restore();
+        }
+
+        const shielded = shieldUntil > now;
+        const frozen = freezeUntil > now;
+
+        for (const b of balls) {
+            ctx.beginPath();
+            ctx.fillStyle = frozen ? '#66d9ff' : '#ff0055';
+            ctx.shadowColor = frozen ? '#66d9ff' : '#ff0055';
+            ctx.shadowBlur = 8;
+            ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        if (isPlaying) {
+            ctx.fillStyle = shielded ? '#66ffe0' : '#ffffff';
+            ctx.beginPath();
+            ctx.arc(player.gx * GRID + GRID / 2, player.gy * GRID + GRID / 2, shielded ? GRID * 0.9 : GRID * 0.6, 0, Math.PI * 2);
+            ctx.fill();
+            if (shielded) { ctx.strokeStyle = 'rgba(102,255,224,0.6)'; ctx.lineWidth = 2; ctx.stroke(); }
+        }
+
+        if (pickupRing) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, pickupRing.timer / 24);
+            ctx.strokeStyle = theme.accent;
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(pickupRing.x, pickupRing.y, pickupRing.radius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        if (pickupFloat) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, pickupFloat.timer / 22);
+            ctx.textAlign = 'center';
+            ctx.font = '18px Arial';
+            ctx.fillText(pickupFloat.icon, pickupFloat.x, pickupFloat.y - (50 - pickupFloat.timer) - 10);
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold 12px Arial';
+            ctx.fillText(pickupFloat.text, pickupFloat.x, pickupFloat.y - (50 - pickupFloat.timer) + 8);
+            ctx.restore();
+        }
+
+        if (gainFloat) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, gainFloat.timer / 20);
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold 14px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(gainFloat.text, gainFloat.x, gainFloat.y - (45 - gainFloat.timer));
+            ctx.restore();
+        }
+
+        if (isTransitioning) {
+            const now = performance.now();
+            const remaining = Math.max(0, transitionUntil - now);
+            const secs = Math.ceil(remaining / 1000);
+            ctx.save();
+            ctx.fillStyle = 'rgba(5,6,10,0.55)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('השטח נכבש!', canvas.width / 2, canvas.height / 2 - 26);
+            ctx.font = 'bold 40px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(String(secs), canvas.width / 2, canvas.height / 2 + 20);
+            ctx.font = '13px Arial';
+            ctx.fillStyle = '#ccc';
+            ctx.fillText('שלב ' + (level + 1) + ' מתחיל בעוד רגע...', canvas.width / 2, canvas.height / 2 + 48);
+            ctx.restore();
+        }
+
+        if (levelPopupTimer > 0) {
+            ctx.save();
+            ctx.globalAlpha = Math.min(1, levelPopupTimer / 30);
+            ctx.fillStyle = theme.accent;
+            ctx.font = 'bold 22px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText('שלב ' + level + '!', canvas.width / 2, canvas.height / 2 - 12);
+            ctx.font = 'bold 14px Arial';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(levelBonusText, canvas.width / 2, canvas.height / 2 + 12);
+            ctx.restore();
+        }
+    }
+
+    function loop(time) {
+        update(time);
+        draw();
+        requestAnimationFrame(loop);
+    }
+
+    document.addEventListener('visibilitychange', () => { isPaused = document.hidden; });
+
+    targetHint.textContent = TARGET_PERCENT + '%';
+    buildBorder();
+    resetPlayer();
+    balls = [];
+    draw();
+    requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
