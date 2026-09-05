@@ -565,6 +565,19 @@
         }
     }
 
+    // מוצא את הנקודה הקרובה ביותר במסגרת החיצונית (הקיר שתמיד קיים) לתא נתון
+    function nearestOuterFramePoint(gx, gy) {
+        const distTop = gy;
+        const distBottom = (ROWS - 1) - gy;
+        const distLeft = gx;
+        const distRight = (COLS - 1) - gx;
+        const minDist = Math.min(distTop, distBottom, distLeft, distRight);
+        if (minDist === distTop) return { x: gx, y: 0 };
+        if (minDist === distBottom) return { x: gx, y: ROWS - 1 };
+        if (minDist === distLeft) return { x: 0, y: gy };
+        return { x: COLS - 1, y: gy };
+    }
+
     function handlePenDown(clientX, clientY) {
         if (!isPlaying || isPaused || isTransitioning) return;
         ensureAudio();
@@ -576,7 +589,14 @@
             player.gx = gx; player.gy = gy;
             penArmed = true;
         } else {
-            penArmed = false; // מגע שהתחיל מחוץ לשטח סגור - לא מתחיל קו
+            // מגע שהתחיל בשטח פתוח - קופצים לנקודה הקרובה במסגרת החיצונית ומציירים מיד אליה
+            const border = nearestOuterFramePoint(gx, gy);
+            player.gx = border.x; player.gy = border.y;
+            penArmed = true;
+            const path = gridLine(player.gx, player.gy, gx, gy);
+            for (let i = 1; i < path.length; i++) {
+                if (!processCell(path[i])) break;
+            }
         }
     }
 
@@ -904,10 +924,14 @@
         if (gainFloat) {
             ctx.save();
             ctx.globalAlpha = Math.min(1, gainFloat.timer / 20);
-            ctx.fillStyle = theme.accent;
             ctx.font = 'bold 14px Arial';
             ctx.textAlign = 'center';
-            ctx.fillText(gainFloat.text, gainFloat.x, gainFloat.y - (45 - gainFloat.timer));
+            const gy = gainFloat.y - (45 - gainFloat.timer);
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = 'rgba(0,0,0,0.65)';
+            ctx.strokeText(gainFloat.text, gainFloat.x, gy);
+            ctx.fillStyle = '#ffffff';
+            ctx.fillText(gainFloat.text, gainFloat.x, gy);
             ctx.restore();
         }
 
