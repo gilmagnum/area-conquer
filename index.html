@@ -576,19 +576,6 @@
         }
     }
 
-    // מוצא את הנקודה הקרובה ביותר במסגרת החיצונית (הקיר שתמיד קיים) לתא נתון
-    function nearestOuterFramePoint(gx, gy) {
-        const distTop = gy;
-        const distBottom = (ROWS - 1) - gy;
-        const distLeft = gx;
-        const distRight = (COLS - 1) - gx;
-        const minDist = Math.min(distTop, distBottom, distLeft, distRight);
-        if (minDist === distTop) return { x: gx, y: 0 };
-        if (minDist === distBottom) return { x: gx, y: ROWS - 1 };
-        if (minDist === distLeft) return { x: 0, y: gy };
-        return { x: COLS - 1, y: gy };
-    }
-
     function handlePenDown(clientX, clientY) {
         if (!isPlaying || isPaused || isTransitioning) return;
         ensureAudio();
@@ -600,14 +587,7 @@
             player.gx = gx; player.gy = gy;
             penArmed = true;
         } else {
-            // מגע שהתחיל בשטח פתוח - קופצים לנקודה הקרובה במסגרת החיצונית ומציירים מיד אליה
-            const border = nearestOuterFramePoint(gx, gy);
-            player.gx = border.x; player.gy = border.y;
-            penArmed = true;
-            const path = gridLine(player.gx, player.gy, gx, gy);
-            for (let i = 1; i < path.length; i++) {
-                if (!processCell(path[i])) break;
-            }
+            penArmed = false; // מגע שהתחיל בשטח פתוח (בתוך המסגרת) - לא מתחיל קו
         }
     }
 
@@ -632,12 +612,33 @@
         if (isDrawing) revertTrail();
     }
 
-    canvas.addEventListener('touchstart', e => { e.preventDefault(); const t = e.touches[0]; handlePenDown(t.clientX, t.clientY); }, { passive: false });
-    canvas.addEventListener('touchmove', e => { e.preventDefault(); const t = e.touches[0]; handlePenMove(t.clientX, t.clientY); }, { passive: false });
-    canvas.addEventListener('touchend', e => { e.preventDefault(); handlePenUp(); }, { passive: false });
-    canvas.addEventListener('touchcancel', () => handlePenUp());
+    // מאזינים על כל המסמך - כדי שגם מגע שמתחיל מחוץ למסגרת הקנבס (על הרקע מסביב) ייקלט;
+    // getCellFromClient כבר "הצמדה" (clamp) לתא הכי קרוב, כך שמגע מחוץ לקנבס נופל אוטומטית על תא המסגרת החיצונית (קיר).
+    document.addEventListener('touchstart', e => {
+        if (e.target.closest('button')) return;
+        if (!isPlaying || isPaused || isTransitioning) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        handlePenDown(t.clientX, t.clientY);
+    }, { passive: false });
+    document.addEventListener('touchmove', e => {
+        if (!isPenDown) return;
+        e.preventDefault();
+        const t = e.touches[0];
+        handlePenMove(t.clientX, t.clientY);
+    }, { passive: false });
+    document.addEventListener('touchend', e => {
+        if (!isPenDown) return;
+        e.preventDefault();
+        handlePenUp();
+    }, { passive: false });
+    document.addEventListener('touchcancel', () => { if (isPenDown) handlePenUp(); });
 
-    canvas.addEventListener('mousedown', e => handlePenDown(e.clientX, e.clientY));
+    document.addEventListener('mousedown', e => {
+        if (e.target.closest('button')) return;
+        if (!isPlaying || isPaused || isTransitioning) return;
+        handlePenDown(e.clientX, e.clientY);
+    });
     window.addEventListener('mousemove', e => { if (isPenDown) handlePenMove(e.clientX, e.clientY); });
     window.addEventListener('mouseup', () => { if (isPenDown) handlePenUp(); });
 
