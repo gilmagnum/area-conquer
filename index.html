@@ -233,6 +233,78 @@
         line-height: 1.5;
     }
 </style>
+<!-- arcaide-leaderboard -->
+<script src="https://gilmagnum.github.io/games/config.js"></script>
+<script src="https://gilmagnum.github.io/games/leaderboard.js"></script>
+<style>
+  .lb-btn{display:block;width:100%;max-width:260px;margin:10px auto 0;padding:11px 18px;
+    border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.07);
+    color:#fff;font:inherit;font-size:15px;font-weight:600;cursor:pointer;transition:.15s}
+  .lb-btn:hover{background:rgba(255,255,255,.14)}
+  .lb-home{display:inline-block;margin-top:14px;color:#9aa3c9;font-size:13px;text-decoration:none}
+  .lb-home:hover{color:#fff}
+/* arcaide-responsive marker */
+/* ===== arcaide-responsive =====================================
+   Overlays become full-viewport panels so their content can never
+   spill out of the small board, and the board itself grows to use
+   whatever height the device actually has (landscape phones). */
+.overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 120;
+    border-radius: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    justify-content: safe center;
+    padding: max(14px, env(safe-area-inset-top)) 16px max(14px, env(safe-area-inset-bottom));
+}
+.overlay > * { flex: 0 0 auto; max-width: min(520px, 92vw); }
+.overlay .lb-btn { width: 100%; max-width: 280px; }
+.overlay .big-btn { max-width: 280px; }
+
+canvas {
+    width:  min(360px, 92vw, 56dvh);
+    height: min(360px, 92vw, 56dvh);
+}
+
+/* short screens — mostly phones held sideways */
+@media (max-height: 560px) {
+    body { justify-content: flex-start; padding-top: max(4px, env(safe-area-inset-top)); }
+    h1 { font-size: 16px; }
+    .stats { font-size: 10.5px; margin-top: 3px; }
+    #rate-label { display: none; }
+    #hint { display: none; }
+    #progress-track { height: 5px; }
+    #progress-target { font-size: 9.5px; }
+    #lives-row-wrap { margin: 2px 0; }
+    #game-container { margin: 4px 0; }
+    /* fill the height that's actually left after the compact header */
+    canvas {
+        width:  min(360px, 92vw, calc(100dvh - 124px));
+        height: min(360px, 92vw, calc(100dvh - 124px));
+    }
+    .overlay h2 { font-size: 18px; }
+    .overlay p, .legend span { font-size: 12px; line-height: 1.45; }
+    .overlay { gap: 8px; }
+    .big-btn { padding: 9px 20px; font-size: 15px; }
+    .lb-btn { margin-top: 6px; padding: 9px 18px; }
+}
+
+/* roomy screens — let the board breathe */
+@media (min-width: 900px) and (min-height: 800px) {
+    canvas { width: min(460px, 60dvh); height: min(460px, 60dvh); }
+}
+</style>
+<!-- arcaide-pwa: installable to the home screen -->
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="theme-color" content="#0b0c11">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="סוגר שטחים">
 </head>
 <body>
 
@@ -272,12 +344,15 @@
             <span>💣 כיבוש אוטומטי</span>
         </div>
         <button class="big-btn" id="btn-play">התחל משחק</button>
+        <button class="lb-btn" id="btn-scores-start">🏆 טבלת שיאים</button>
+        <a class="lb-home" href="https://gilmagnum.github.io/games/">← כל המשחקים</a>
     </div>
 
     <div class="overlay hidden" id="gameover-overlay">
         <h2 id="gameover-title">המשחק נגמר</h2>
         <p id="gameover-stats"></p>
         <button class="big-btn" id="btn-restart">שחק שוב</button>
+        <button class="lb-btn" id="btn-scores">🏆 טבלת שיאים</button>
     </div>
 </div>
 
@@ -645,6 +720,16 @@
     document.getElementById('btn-play').addEventListener('click', startGame);
     document.getElementById('btn-restart').addEventListener('click', startGame);
 
+    // ArcAIde global leaderboard
+    if (window.Leaderboard) {
+        Leaderboard.init({ game: 'area-conquer', title: 'סוגר שטחים', scoreLabel: 'נקודות' });
+        document.getElementById('btn-scores').addEventListener('click', function () { Leaderboard.show(); });
+        document.getElementById('btn-scores-start').addEventListener('click', function () { Leaderboard.show(); });
+    } else {
+        document.getElementById('btn-scores').style.display = 'none';
+        document.getElementById('btn-scores-start').style.display = 'none';
+    }
+
     // ---------- אובדן חיים ----------
     function loseLife() {
         sndDeath();
@@ -729,6 +814,13 @@
         gameoverStats.innerHTML =
             'ניקוד סופי: <b>' + score + '</b> (שיא: ' + bestScore + ')<br>הגעת לשלב <b>' + level + '</b> עם כיבוש של ' + Math.floor(capturedPercent) + '%';
         gameoverOverlay.classList.remove('hidden');
+
+        // ArcAIde global leaderboard
+        if (window.Leaderboard) {
+            setTimeout(function () {
+                Leaderboard.gameOver(score, { level: level, captured: Math.floor(capturedPercent) });
+            }, 900);
+        }
     }
 
     // ---------- בונוסים ----------
