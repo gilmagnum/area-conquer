@@ -47,13 +47,20 @@
     .stats b { color: var(--accent); font-size: 13.5px; transition: color 0.4s ease; }
 
     #progress-wrap {
+        position: relative;
         width: 260px;
-        height: 8px;
+        height: 10px;
         background: #1e2130;
         border-radius: 4px;
-        margin-top: 8px;
-        overflow: hidden;
+        margin-top: 10px;
+        overflow: visible;
         border: 1px solid #2a2e40;
+    }
+    #progress-track {
+        position: absolute;
+        inset: 0;
+        border-radius: 4px;
+        overflow: hidden;
     }
     #progress-bar {
         height: 100%;
@@ -61,6 +68,36 @@
         background: var(--accent);
         transition: width 0.15s ease-out, background 0.4s ease;
     }
+    #progress-target {
+        position: absolute;
+        top: -3px;
+        bottom: -3px;
+        width: 2px;
+        background: #fff;
+        right: 75%;
+        box-shadow: 0 0 4px rgba(255,255,255,0.8);
+    }
+    #progress-target::after {
+        content: '75%';
+        position: absolute;
+        top: 20px;
+        right: -9px;
+        font-size: 9px;
+        color: #fff;
+        white-space: nowrap;
+    }
+    #lives-row-wrap {
+        font-size: 15px;
+        letter-spacing: 2px;
+        margin-top: 22px;
+        text-align: center;
+    }
+    #rate-label {
+        font-size: 10.5px;
+        color: #888;
+        margin-top: 3px;
+    }
+    #rate-label b { color: var(--accent); }
 
     #game-container {
         position: relative;
@@ -114,7 +151,6 @@
     }
     .big-btn:active { filter: brightness(1.4); }
 
-    #lives-row { font-size: 15px; letter-spacing: 2px; }
     #lives-row .empty { opacity: 0.25; filter: grayscale(1); }
 
     #effect-gauges {
@@ -197,10 +233,14 @@
         <div>שלב: <b id="level">1</b></div>
         <div>ניקוד: <b id="score-val">0</b></div>
         <div>שטח: <b id="percent">0</b>%</div>
-        <div>חיים: <span id="lives-row"></span></div>
         <div>שיא: <b id="best">0</b></div>
     </div>
-    <div id="progress-wrap"><div id="progress-bar"></div></div>
+    <div id="progress-wrap">
+        <div id="progress-track"><div id="progress-bar"></div></div>
+        <div id="progress-target"></div>
+    </div>
+    <div id="lives-row-wrap"><span id="lives-row"></span></div>
+    <div id="rate-label">קצב צבירה: <b id="rate-val">×1</b></div>
 </header>
 
 <div id="game-container">
@@ -243,6 +283,7 @@
     const levelEl = document.getElementById('level');
     const bestEl = document.getElementById('best');
     const progressBar = document.getElementById('progress-bar');
+    const rateValEl = document.getElementById('rate-val');
     const effectGaugesEl = document.getElementById('effect-gauges');
     const startOverlay = document.getElementById('start-overlay');
     const gameoverOverlay = document.getElementById('gameover-overlay');
@@ -417,7 +458,8 @@
         renderLives();
         levelEl.textContent = level;
         bestEl.textContent = bestScore;
-        progressBar.style.width = Math.min(100, (capturedPercent / TARGET_PERCENT) * 100) + '%';
+        progressBar.style.width = Math.min(100, capturedPercent) + '%';
+        rateValEl.textContent = '×' + level;
     }
 
     function renderLives() {
