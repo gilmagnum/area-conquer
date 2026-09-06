@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>סוגר שטחים - משודרג</title>
+<title>סוגר שטחים · arcAId</title>
 <style>
     :root { --accent: #00ffcc; }
     * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -294,6 +294,15 @@ canvas {
 @media (min-width: 900px) and (min-height: 800px) {
     canvas { width: min(460px, 60dvh); height: min(460px, 60dvh); }
 }
+
+/* ===== arcaide-theme: light chrome around the play area ===== */
+html[data-arcade-theme="light"] body{ background:radial-gradient(circle at 50%% 0%%, #eef3fb 0%%, #dbe3f0 70%%); color:#1b2540; }
+html[data-arcade-theme="light"] .stats{color:#5a6a8c}
+html[data-arcade-theme="light"] .stats{color:#5a6a8c}
+html[data-arcade-theme="light"] #rate-label{color:#7b87a6}
+html[data-arcade-theme="light"] #hint{color:#6b7899}
+html[data-arcade-theme="light"] #progress-track{background:rgba(31,43,61,.10)}
+html[data-arcade-theme="light"] #progress-target{color:#5a6a8c}
 </style>
 <!-- arcaide-pwa: installable to the home screen -->
 <link rel="manifest" href="manifest.webmanifest">
@@ -308,7 +317,7 @@ canvas {
 </head>
 <body>
 
-<button id="sound-toggle">🔊</button>
+
 
 <header>
     <h1>סוגר שטחים</h1>
@@ -344,15 +353,14 @@ canvas {
             <span>💣 כיבוש אוטומטי</span>
         </div>
         <button class="big-btn" id="btn-play">התחל משחק</button>
-        <button class="lb-btn" id="btn-scores-start">🏆 טבלת שיאים</button>
-        <a class="lb-home" href="https://gilmagnum.github.io/games/">← כל המשחקים</a>
+
     </div>
 
     <div class="overlay hidden" id="gameover-overlay">
         <h2 id="gameover-title">המשחק נגמר</h2>
         <p id="gameover-stats"></p>
         <button class="big-btn" id="btn-restart">שחק שוב</button>
-        <button class="lb-btn" id="btn-scores">🏆 טבלת שיאים</button>
+
     </div>
 </div>
 
@@ -376,7 +384,7 @@ canvas {
     const gameoverTitle = document.getElementById('gameover-title');
     const gameoverStats = document.getElementById('gameover-stats');
     const targetHint = document.getElementById('target-hint');
-    const soundToggleBtn = document.getElementById('sound-toggle');
+    const soundToggleBtn = { textContent: '', addEventListener: function(){} }; // arcaide-bar: moved to the shared bar
 
     // ---------- הגדרות ----------
     const GRID = 8;
@@ -720,14 +728,16 @@ canvas {
     document.getElementById('btn-play').addEventListener('click', startGame);
     document.getElementById('btn-restart').addEventListener('click', startGame);
 
-    // ArcAIde global leaderboard
+    // arcAId global leaderboard + shared control bar
     if (window.Leaderboard) {
         Leaderboard.init({ game: 'area-conquer', title: 'סוגר שטחים', scoreLabel: 'נקודות' });
-        document.getElementById('btn-scores').addEventListener('click', function () { Leaderboard.show(); });
-        document.getElementById('btn-scores-start').addEventListener('click', function () { Leaderboard.show(); });
-    } else {
-        document.getElementById('btn-scores').style.display = 'none';
-        document.getElementById('btn-scores-start').style.display = 'none';
+        Arcade.controls({
+            onPause:   function () { isPaused = true; },
+            onResume:  function () { isPaused = false; },
+            onRestart: function () { startGame(); },
+            onMute:    function (m) { soundOn = !m; if (soundOn) ensureAudio(); },
+            theme: true
+        });
     }
 
     // ---------- אובדן חיים ----------
@@ -815,7 +825,7 @@ canvas {
             'ניקוד סופי: <b>' + score + '</b> (שיא: ' + bestScore + ')<br>הגעת לשלב <b>' + level + '</b> עם כיבוש של ' + Math.floor(capturedPercent) + '%';
         gameoverOverlay.classList.remove('hidden');
 
-        // ArcAIde global leaderboard
+        // arcAId global leaderboard
         if (window.Leaderboard) {
             setTimeout(function () {
                 Leaderboard.gameOver(score, { level: level, captured: Math.floor(capturedPercent) });
@@ -1079,7 +1089,10 @@ canvas {
         requestAnimationFrame(loop);
     }
 
-    document.addEventListener('visibilitychange', () => { isPaused = document.hidden; });
+    document.addEventListener('visibilitychange', () => {
+        isPaused = document.hidden;
+        if (window.Arcade) Arcade.setPaused(isPaused);
+    });
 
     targetHint.textContent = TARGET_PERCENT + '%';
     buildBorder();
