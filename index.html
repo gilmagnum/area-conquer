@@ -2,6 +2,7 @@
 <html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<script>/* arcAId theme: light by default, remembered per browser */try{var _t=localStorage.getItem("gmh:theme");document.documentElement.setAttribute("data-arcade-theme",_t==="dark"?"dark":"light");}catch(e){document.documentElement.setAttribute("data-arcade-theme","light");}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>סוגר שטחים · arcAId</title>
 <style>
@@ -296,13 +297,28 @@ canvas {
 }
 
 /* ===== arcaide-theme: light chrome around the play area ===== */
-html[data-arcade-theme="light"] body{ background:radial-gradient(circle at 50%% 0%%, #eef3fb 0%%, #dbe3f0 70%%); color:#1b2540; }
+html[data-arcade-theme="light"], html[data-arcade-theme="light"] body{ background:radial-gradient(circle at 50% 0%, #eef3fb 0%, #dbe3f0 70%); color:#1b2540; }
 html[data-arcade-theme="light"] .stats{color:#5a6a8c}
 html[data-arcade-theme="light"] .stats{color:#5a6a8c}
 html[data-arcade-theme="light"] #rate-label{color:#7b87a6}
 html[data-arcade-theme="light"] #hint{color:#6b7899}
 html[data-arcade-theme="light"] #progress-track{background:rgba(31,43,61,.10)}
 html[data-arcade-theme="light"] #progress-target{color:#5a6a8c}
+/* light mode: the panels and text follow the page, the playfield stays a dark screen */
+html[data-arcade-theme="light"] .overlay{ background:rgba(238,243,251,.94); }
+html[data-arcade-theme="light"] .overlay p{ color:#41506f; }
+html[data-arcade-theme="light"] .legend span,
+html[data-arcade-theme="light"] #hint{ color:#4a5a7c; }
+html[data-arcade-theme="light"] h1{ text-shadow:none; }
+html[data-arcade-theme="light"] #game-container{ box-shadow:0 10px 30px rgba(31,43,61,.18); }
+/* the level accent is tuned for a dark screen — darken it so it stays readable on light */
+html[data-arcade-theme="light"] h1,
+html[data-arcade-theme="light"] .overlay h2,
+html[data-arcade-theme="light"] .stats b,
+html[data-arcade-theme="light"] #rate-label b,
+html[data-arcade-theme="light"] .big-btn{ filter:brightness(.62) saturate(1.45); }
+html[data-arcade-theme="light"] .overlay{ background:rgba(240,244,252,.97); }
+html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
 </style>
 <!-- arcaide-pwa: installable to the home screen -->
 <link rel="manifest" href="manifest.webmanifest">
