@@ -233,6 +233,15 @@
         max-width: min(320px, 90vw);
         line-height: 1.5;
     }
+
+/* pause is visible, like in the other games */
+.arcaide-pause-veil{
+  position:absolute; inset:0; z-index:140; display:flex; align-items:center; justify-content:center;
+  background:rgba(6,10,20,0.62); backdrop-filter:blur(2px); -webkit-backdrop-filter:blur(2px);
+  font-family:inherit; font-size:20px; font-weight:900; letter-spacing:1px; color:#ffd66b;
+  text-shadow:0 0 18px rgba(255,214,107,0.45); border-radius:inherit;
+}
+.arcaide-pause-veil.hidden{ display:none; }
 </style>
 <!-- arcaide-leaderboard -->
 <script src="https://gilmagnum.github.io/games/config.js"></script>
@@ -542,7 +551,26 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
         updateHud();
     }
 
+
+  // shared look for the paused state
+  var arcadeVeil = null;
+  function arcadeShowPause(on){
+    var host = document.getElementById('game-container');
+    if (!host) return;
+    if (getComputedStyle(host).position === 'static') host.style.position = 'relative';
+    if (!arcadeVeil){
+      arcadeVeil = document.createElement('div');
+      arcadeVeil.className = 'arcaide-pause-veil hidden';
+      arcadeVeil.textContent = '\u23F8 \u05DE\u05D5\u05E9\u05D4\u05D4';
+      host.appendChild(arcadeVeil);
+    }
+    arcadeVeil.classList.toggle('hidden', !on);
+  }
+
     function startGame() {
+        if (window.Leaderboard) Leaderboard.cancelPending();   // a new round drops the old run's panel
+        arcadeShowPause(false);
+        if (window.Arcade) Arcade.setPaused(false);   // a fresh round is never paused
         ensureAudio();
         lives = 3;
         level = 1;
@@ -748,8 +776,8 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
     if (window.Leaderboard) {
         Leaderboard.init({ game: 'area-conquer', title: 'סוגר שטחים', scoreLabel: 'נקודות' });
         Arcade.controls({
-            onPause:   function () { isPaused = true; },
-            onResume:  function () { isPaused = false; },
+            onPause:   function () { isPaused = true;  arcadeShowPause(true); },
+            onResume:  function () { isPaused = false; arcadeShowPause(false); },
             onRestart: function () { startGame(); },
             onMute:    function (m) { soundOn = !m; if (soundOn) ensureAudio(); },
             theme: true
@@ -843,9 +871,8 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
 
         // arcAId global leaderboard
         if (window.Leaderboard) {
-            setTimeout(function () {
-                Leaderboard.gameOver(score, { level: level, captured: Math.floor(capturedPercent) });
-            }, 900);
+            // cancellable: starting a new round drops it, so it can never land on the new game
+            Leaderboard.gameOverIn(900, score, { level: level, captured: Math.floor(capturedPercent) });
         }
     }
 
@@ -1105,9 +1132,14 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
         requestAnimationFrame(loop);
     }
 
+    // leaving the tab pauses; coming back must not undo a pause the player asked for
+    let autoPaused = false;
     document.addEventListener('visibilitychange', () => {
-        isPaused = document.hidden;
-        if (window.Arcade) Arcade.setPaused(isPaused);
+        if (document.hidden) {
+            if (!isPaused) { autoPaused = true; isPaused = true; arcadeShowPause(true); if (window.Arcade) Arcade.setPaused(true); }
+        } else if (autoPaused) {
+            autoPaused = false; isPaused = false; arcadeShowPause(false); if (window.Arcade) Arcade.setPaused(false);
+        }
     });
 
     targetHint.textContent = TARGET_PERCENT + '%';
