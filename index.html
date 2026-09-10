@@ -244,8 +244,8 @@
 .arcaide-pause-veil.hidden{ display:none; }
 </style>
 <!-- arcaide-leaderboard -->
-<script src="https://gilmagnum.github.io/games/config.js"></script>
-<script src="https://gilmagnum.github.io/games/leaderboard.js"></script>
+<script src="https://gilmagnum.github.io/games/config.js?v=4"></script>
+<script src="https://gilmagnum.github.io/games/leaderboard.js?v=4"></script>
 <style>
   .lb-btn{display:block;width:100%;max-width:260px;margin:10px auto 0;padding:11px 18px;
     border:1px solid rgba(255,255,255,.18);border-radius:12px;background:rgba(255,255,255,.07);
@@ -568,7 +568,7 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
   }
 
     function startGame() {
-        if (window.Leaderboard) Leaderboard.cancelPending();   // a new round drops the old run's panel
+        if (window.Leaderboard && Leaderboard.cancelPending) Leaderboard.cancelPending();   // a new round drops the old run's panel
         arcadeShowPause(false);
         if (window.Arcade) Arcade.setPaused(false);   // a fresh round is never paused
         ensureAudio();
@@ -872,7 +872,7 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
         // arcAId global leaderboard
         if (window.Leaderboard) {
             // cancellable: starting a new round drops it, so it can never land on the new game
-            Leaderboard.gameOverIn(900, score, { level: level, captured: Math.floor(capturedPercent) });
+            (Leaderboard.gameOverIn ? Leaderboard.gameOverIn(900, score, { level: level, captured: Math.floor(capturedPercent) }) : setTimeout(function(){ Leaderboard.gameOver(score, { level: level, captured: Math.floor(capturedPercent) }); }, 900));
         }
     }
 
