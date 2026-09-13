@@ -741,8 +741,22 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
 
     // מאזינים על כל המסמך - כדי שגם מגע שמתחיל מחוץ למסגרת הקנבס (על הרקע מסביב) ייקלט;
     // getCellFromClient כבר "הצמדה" (clamp) לתא הכי קרוב, כך שמגע מחוץ לקנבס נופל אוטומטית על תא המסגרת החיצונית (קיר).
+    // the shared control bar lives in a shadow root, so e.target is retargeted to its host and
+    // closest('button') alone never matches it — walk the composed path instead, or the bar's
+    // buttons get their taps swallowed by preventDefault below and never fire a click.
+    function onChrome(e) {
+        var path = (e.composedPath && e.composedPath()) || [];
+        for (var i = 0; i < path.length; i++) {
+            var n = path[i];
+            if (!n || n.nodeType !== 1) continue;
+            if (n.tagName === 'BUTTON' || n.tagName === 'A' || n.tagName === 'INPUT') return true;
+            if (n.hasAttribute && (n.hasAttribute('data-arcade-bar') || n.hasAttribute('data-gmh-leaderboard'))) return true;
+        }
+        return !!(e.target && e.target.closest && e.target.closest('button'));
+    }
+
     document.addEventListener('touchstart', e => {
-        if (e.target.closest('button')) return;
+        if (onChrome(e)) return;
         if (!isPlaying || isPaused || isTransitioning) return;
         e.preventDefault();
         const t = e.touches[0];
@@ -762,7 +776,7 @@ html[data-arcade-theme="light"] .overlay p{ color:#33405c; }
     document.addEventListener('touchcancel', () => { if (isPenDown) handlePenUp(); });
 
     document.addEventListener('mousedown', e => {
-        if (e.target.closest('button')) return;
+        if (onChrome(e)) return;
         if (!isPlaying || isPaused || isTransitioning) return;
         handlePenDown(e.clientX, e.clientY);
     });
